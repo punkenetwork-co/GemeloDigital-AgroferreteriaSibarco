@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gemelo Digital de Inventarios - Agroferretería Sibarco</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<style>
+  :root{
+    --azul:#0b4f9e; --azul-2:#1565c0; --azul-suave:#e8f1fb;
+    --gris-bg:#f5f7fa; --gris-borde:#e2e8f0; --gris-texto:#4a5568; --texto:#1a202c;
+    --ok:#15803d; --warn:#b45309; --err:#b91c1c;
+    --sombra:0 1px 3px rgba(15,23,42,.06), 0 4px 12px rgba(15,23,42,.05);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{font-family:'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif;background:var(--gris-bg);color:var(--texto);font-size:14px;line-height:1.45;}
+  .app{display:flex; min-height:100vh;}
+  .sidebar{width:250px; background:#fff; border-right:1px solid var(--gris-borde); display:flex; flex-direction:column; position:sticky; top:0; height:100vh; overflow-y:auto; z-index:20;}
+  .brand{display:flex; align-items:center; gap:10px; padding:18px 16px; border-bottom:1px solid var(--gris-borde);}
+  .brand i{font-size:26px; color:var(--azul);}
+  .brand-title{font-weight:700; font-size:13px; letter-spacing:.4px; color:var(--azul);}
+  .brand-sub{font-size:12px; color:var(--gris-texto);}
+  .nav{padding:10px 8px; display:flex; flex-direction:column; gap:2px;}
+  .nav-item{display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px; color:var(--gris-texto); text-decoration:none; font-size:13.5px; transition:background .15s, color .15s;}
+  .nav-item i{font-size:16px; width:18px; text-align:center;}
+  .nav-item:hover{background:var(--azul-suave); color:var(--azul);}
+  .nav-item.active{background:var(--azul); color:#fff; font-weight:600;}
+  .main{flex:1; display:flex; flex-direction:column; min-width:0;}
+  .topbar{background:#fff; border-bottom:1px solid var(--gris-borde); padding:12px 20px; display:flex; align-items:center; gap:14px; position:sticky; top:0; z-index:10; flex-wrap:wrap;}
+  .menu-toggle{display:none; background:none; border:none; font-size:22px; color:var(--azul); cursor:pointer;}
+  .topbar-info{display:flex; align-items:center; gap:12px; flex:1; flex-wrap:wrap;}
+  .badge-source{background:var(--azul-suave); color:var(--azul); padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:6px;}
+  .archivo-info{font-size:12.5px; color:var(--gris-texto);}
+  .topbar-actions{display:flex; gap:8px;}
+  .btn{display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:8px; border:1px solid transparent; font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; font-family:inherit;}
+  .btn-primary{background:var(--azul); color:#fff;}
+  .btn-primary:hover{background:var(--azul-2);}
+  .btn-secondary{background:#fff; color:var(--azul); border-color:var(--azul);}
+  .btn-secondary:hover{background:var(--azul-suave);}
+  .btn-ghost{background:#fff; color:var(--gris-texto); border-color:var(--gris-borde);}
+  .btn-ghost:hover{background:var(--gris-bg);}
+  .btn-danger{background:#fff; color:var(--err); border-color:#fecaca;}
+  .btn-danger:hover{background:#fef2f2;}
+  .btn-sm{padding:5px 10px; font-size:12px;}
+  .content{padding:22px; flex:1;}
+  .view{display:none; animation:fade .25s ease;}
+  .view.active{display:block;}
+  @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+  h1.page-title{font-size:20px; color:var(--texto); margin-bottom:4px;}
+  .page-sub{color:var(--gris-texto); font-size:13px; margin-bottom:18px;}
+  .card{background:#fff; border:1px solid var(--gris-borde); border-radius:12px; padding:16px; box-shadow:var(--sombra); margin-bottom:16px;}
+  .card-title{font-size:14px; font-weight:700; color:var(--azul); margin-bottom:12px; display:flex; align-items:center; gap:8px;}
+  .kpis{display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:12px; margin-bottom:18px;}
+  .kpi{background:#fff; border:1px solid var(--gris-borde); border-radius:12px; padding:14px 16px; box-shadow:var(--sombra); display:flex; flex-direction:column; gap:6px;}
+  .kpi-head{display:flex; align-items:center; gap:8px; color:var(--gris-texto); font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.3px;}
+  .kpi-head i{color:var(--azul); font-size:15px;}
+  .kpi-value{font-size:22px; font-weight:700; color:var(--texto); word-break:break-word;}
+  .kpi-value.sm{font-size:15px;}
+  .kpi-foot{font-size:11.5px; color:var(--gris-texto);}
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media (max-width:900px){.grid-2{grid-template-columns:1fr;}}
+  .table-wrap{overflow-x:auto; border-radius:8px; border:1px solid var(--gris-borde);}
+  table{width:100%; border-collapse:collapse; font-size:13px; background:#fff;}
+  th,td{padding:9px 12px; text-align:left; border-bottom:1px solid var(--gris-borde); white-space:nowrap;}
+  th{background:var(--azul-suave); color:var(--azul); font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.3px;}
+  tbody tr:hover{background:#f8fafc;}
+  tbody tr:last-child td{border-bottom:none;}
+  td.num, th.num{text-align:right; font-variant-numeric:tabular-nums;}
+  .tag{display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700;}
+  .tag-h{background:#e0ecff; color:#0b4f9e;}
+  .tag-o{background:#e6f6ec; color:#15803d;}
+  .tag-disponible{background:#dcfce7; color:#166534;}
+  .tag-seguimiento{background:#dbeafe; color:#1e40af;}
+  .tag-reposicion{background:#fef3c7; color:#92400e;}
+  .tag-agotado{background:#fee2e2; color:#991b1b;}
+  .tag-sin{background:#f1f5f9; color:#64748b;}
+  .empty{padding:28px; text-align:center; color:var(--gris-texto); font-size:13.5px;}
+  .empty i{font-size:34px; display:block; margin-bottom:10px; color:#cbd5e1;}
+  .form-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:12px; align-items:end;}
+  .field{display:flex; flex-direction:column; gap:4px;}
+  .field label{font-size:12px; font-weight:600; color:var(--gris-texto);}
+  .field input, .field select, .field textarea{padding:8px 10px; border:1px solid var(--gris-borde); border-radius:8px; font-size:13px; font-family:inherit; background:#fff; color:var(--texto);}
+  .field input:focus, .field select:focus, .field textarea:focus{outline:none; border-color:var(--azul-2); box-shadow:0 0 0 3px rgba(21,101,192,.12);}
+  .filters{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;}
+  .filters input, .filters select{padding:7px 10px; border:1px solid var(--gris-borde); border-radius:8px; font-size:13px; font-family:inherit;}
+  .flow{display:flex; flex-direction:column; align-items:center; gap:6px; padding:14px 0;}
+  .flow-node{background:#fff; border:2px solid var(--azul); color:var(--azul); border-radius:10px; padding:10px 22px; font-weight:700; font-size:13px; display:flex; align-items:center; gap:10px; min-width:220px; justify-content:center; box-shadow:var(--sombra);}
+  .flow-node i{font-size:17px;}
+  .flow-arrow{color:#94a3b8; font-size:16px;}
+  .flow-node.highlight{background:var(--azul); color:#fff;}
+  .toast-wrap{position:fixed; top:18px; right:18px; display:flex; flex-direction:column; gap:8px; z-index:9999;}
+  .toast{background:#fff; border-left:4px solid var(--azul); border-radius:8px; padding:10px 14px; box-shadow:0 8px 24px rgba(15,23,42,.15); font-size:13px; display:flex; align-items:center; gap:8px; min-width:240px; animation:slideIn .25s ease;}
+  .toast.ok{border-color:var(--ok);}
+  .toast.err{border-color:var(--err);}
+  .toast.warn{border-color:var(--warn);}
+  .toast i{font-size:16px;}
+  .toast.ok i{color:var(--ok);}
+  .toast.err i{color:var(--err);}
+  .toast.warn i{color:var(--warn);}
+  @keyframes slideIn{from{transform:translateX(20px); opacity:0;} to{transform:none; opacity:1;}}
+  .modal-bg{position:fixed; inset:0; background:rgba(15,23,42,.5); display:none; align-items:center; justify-content:center; z-index:9000; padding:20px;}
+  .modal-bg.show{display:flex;}
+  .modal{background:#fff; border-radius:12px; max-width:680px; width:100%; max-height:85vh; overflow-y:auto; box-shadow:0 20px 50px rgba(0,0,0,.3);}
+  .modal-head{padding:14px 18px; border-bottom:1px solid var(--gris-borde); display:flex; justify-content:space-between; align-items:center;}
+  .modal-head h3{font-size:15px; color:var(--azul);}
+  .modal-close{background:none; border:none; font-size:20px; cursor:pointer; color:var(--gris-texto);}
+  .modal-body{padding:18px;}
+  .chart-box{position:relative; height:280px;}
+  .chart-box.tall{height:340px;}
+  @media (max-width:820px){
+    .sidebar{position:fixed; left:0; top:0; transform:translateX(-100%); transition:transform .25s; box-shadow:0 0 30px rgba(0,0,0,.15);}
+    .sidebar.open{transform:none;}
+    .menu-toggle{display:block;}
+    .content{padding:14px;}
+    .topbar{padding:10px 12px;}
+  }
+  .hint{background:#f0f7ff; border-left:3px solid var(--azul-2); padding:10px 14px; border-radius:6px; font-size:12.5px; color:#1e3a8a; margin:10px 0;}
+  .hint i{color:var(--azul-2);}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <i class="bi bi-boxes"></i>
+      <div>
+        <div class="brand-title">GEMELO DIGITAL</div>
+        <div class="brand-sub">Agroferretería Sibarco</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="#" data-view="dashboard"   class="nav-item active"><i class="bi bi-speedometer2"></i> Dashboard</a>
+      <a href="#" data-view="productos"   class="nav-item"><i class="bi bi-box-seam"></i> Productos</a>
+      <a href="#" data-view="entradas"    class="nav-item"><i class="bi bi-box-arrow-in-down"></i> Entradas</a>
+      <a href="#" data-view="salidas"     class="nav-item"><i class="bi bi-box-arrow-up"></i> Salidas</a>
+      <a href="#" data-view="existencias" class="nav-item"><i class="bi bi-clipboard-data"></i> Existencias</a>
+      <a href="#" data-view="movimientos" class="nav-item"><i class="bi bi-arrow-left-right"></i> Movimientos</a>
+      <a href="#" data-view="ventas"      class="nav-item"><i class="bi bi-cash-stack"></i> Ventas</a>
+      <a href="#" data-view="analisis"    class="nav-item"><i class="bi bi-graph-up-arrow"></i> Análisis</a>
+      <a href="#" data-view="demanda"     class="nav-item"><i class="bi bi-activity"></i> Demanda</a>
+      <a href="#" data-view="proceso"     class="nav-item"><i class="bi bi-diagram-3"></i> Modelo del proceso</a>
+      <a href="#" data-view="parametros"  class="nav-item"><i class="bi bi-sliders"></i> Parámetros</a>
+      <a href="#" data-view="exportar"    class="nav-item"><i class="bi bi-download"></i> Exportar</a>
+      <a href="#" data-view="alcance"     class="nav-item"><i class="bi bi-info-circle"></i> Alcance</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="menu-toggle" id="menuToggle"><i class="bi bi-list"></i></button>
+      <div class="topbar-info">
+        <span class="badge-source"><i class="bi bi-file-earmark-spreadsheet"></i> Fuente: BASE_VENTAS</span>
+        <span id="archivoInfo" class="archivo-info">Sin archivo Excel cargado</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary" id="btnImportar"><i class="bi bi-upload"></i> Importar Excel</button>
+        <input type="file" id="fileInput" accept=".xlsx,.xls" hidden>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <section id="view-dashboard" class="view active">
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-sub">Prototipo académico para la representación y análisis del proceso de inventarios.</p>
+        <div id="dashEmpty" class="card">
+          <div class="empty"><i class="bi bi-file-earmark-spreadsheet"></i> Cargue el archivo <b>BASE_VENTAS</b> para visualizar los indicadores.</div>
+        </div>
+        <div id="dashContent" style="display:none;">
+          <div class="kpis" id="kpiGrid"></div>
+          <div class="grid-2">
+            <div class="card"><div class="card-title"><i class="bi bi-bar-chart-line"></i> Ventas por mes <span class="tag tag-h">Histórico</span></div><div class="chart-box"><canvas id="chartVentasMes"></canvas></div></div>
+            <div class="card"><div class="card-title"><i class="bi bi-box-seam"></i> Top productos por facturación <span class="tag tag-h">Histórico</span></div><div class="chart-box"><canvas id="chartTopProductos"></canvas></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-productos" class="view">
+        <h1 class="page-title">Productos</h1>
+        <p class="page-sub">Catálogo calculado desde la hoja BASE_VENTAS <span class="tag tag-h">Histórico</span></p>
+        <div class="card">
+          <div class="filters">
+            <input type="text" id="filtroProducto" placeholder="Buscar producto..." style="min-width:220px;">
+            <select id="ordenProducto">
+              <option value="total">Ordenar por ventas totales</option>
+              <option value="unidades">Ordenar por unidades vendidas</option>
+              <option value="n">Ordenar por número de ventas</option>
+              <option value="nombre">Ordenar por nombre</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table id="tablaProductos">
+              <thead><tr><th>#</th><th>Producto</th><th class="num">Unidades vendidas</th><th class="num">N.º ventas</th><th class="num">Ventas totales</th><th class="num">Participación</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div id="prodEmpty" class="empty"><i class="bi bi-inbox"></i> Sin información cargada.</div>
+        </div>
+      </section>
+
+      <section id="view-entradas" class="view">
+        <h1 class="page-title">Entradas de productos</h1>
+        <p class="page-sub">Registro operativo <span class="tag tag-o">Operativo</span></p>
+        <div class="card">
+          <div class="card-title"><i class="bi bi-box-arrow-in-down"></i> Registrar entrada</div>
+          <form id="formEntrada" class="form-grid">
+            <div class="field"><label>Fecha</label><input type="date" id="entFecha" required></div>
+            <div class="field"><label>Producto</label><select id="entProducto" required></select></div>
+            <div class="field"><label>Cantidad</label><input type="number" id="entCantidad" min="1" step="1" required></div>
+            <div class="field"><label>Observación</label><input type="text" id="entObs" placeholder="Opcional"></div>
+            <div class="field"><button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Registrar entrada</button></div>
+          </form>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="bi bi-list-ul"></i> Entradas registradas</div>
+          <div class="table-wrap">
+            <table id="tablaEntradas"><thead><tr><th>Fecha</th><th>Producto</th><th class="num">Cantidad</th><th>Observación</th><th></th></tr></thead><tbody></tbody></table>
+          </div>
+          <div id="entEmpty" class="empty"><i class="bi bi-inbox"></i> Aún no hay entradas registradas.</div>
+        </div>
+      </section>
+
+      <section id="view-salidas" class="view">
+        <h1 class="page-title">Salidas de productos</h1>
+        <p class="page-sub">Registro operativo <span class="tag tag-o">Operativo</span></p>
+        <div class="card">
+          <div class="card-title"><i class="bi bi-box-arrow-up"></i> Registrar salida</div>
+          <form id="formSalida" class="form-grid">
+            <div class="field"><label>Fecha</label><input type="date" id="salFecha" required></div>
+            <div class="field"><label>Producto</label><select id="salProducto" required></select></div>
+            <div class="field"><label>Cantidad</label><input type="number" id="salCantidad" min="1" step="1" required></div>
+            <div class="field"><label>Valor</label><input type="number" id="salValor" min="0" step="0.01" required></div>
+            <div class="field"><label>Observación</label><input type="text" id="salObs" placeholder="Opcional"></div>
+            <div class="field"><button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Registrar salida</button></div>
+          </form>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="bi bi-list-ul"></i> Salidas registradas</div>
+          <div class="table-wrap">
+            <table id="tablaSalidas"><thead><tr><th>Fecha</th><th>Producto</th><th class="num">Cantidad</th><th class="num">Valor</th><th>Observación</th><th></th></tr></thead><tbody></tbody></table>
+          </div>
+          <div id="salEmpty" class="empty"><i class="bi bi-inbox"></i> Aún no hay salidas registradas.</div>
+        </div>
+      </section>
+
+      <section id="view-existencias" class="view">
+        <h1 class="page-title">Existencias</h1>
+        <p class="page-sub">Existencia final = Existencia inicial + Entradas − Salidas</p>
+        <div class="hint"><i class="bi bi-info-circle-fill"></i> La existencia inicial <b>no es un dato histórico del Excel</b>. Si no se configura manualmente, el sistema mostrará “Existencia inicial no configurada.” y no calculará la existencia final.</div>
+        <div class="card">
+          <div class="card-title"><i class="bi bi-sliders"></i> Configurar existencia inicial (parámetro operativo)</div>
+          <form id="formExistencia" class="form-grid">
+            <div class="field"><label>Producto</label><select id="exiProducto" required></select></div>
+            <div class="field"><label>Existencia inicial</label><input type="number" id="exiCantidad" min="0" step="1" required></div>
+            <div class="field"><button type="submit" class="btn btn-secondary"><i class="bi bi-save"></i> Guardar</button></div>
+          </form>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="bi bi-clipboard-data"></i> Estado de existencias</div>
+          <div class="table-wrap">
+            <table id="tablaExistencias">
+              <thead><tr><th>Producto</th><th class="num">Exist. inicial</th><th class="num">Entradas</th><th class="num">Salidas</th><th class="num">Exist. final</th><th>Estado</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div id="exiEmpty" class="empty"><i class="bi bi-inbox"></i> Sin información cargada.</div>
+        </div>
+      </section>
+
+      <section id="view-movimientos" class="view">
+        <h1 class="page-title">Historial de movimientos</h1>
+        <p class="page-sub">Entradas y salidas registradas en el prototipo <span class="tag tag-o">Operativo</span></p>
+        <div class="card">
+          <div class="filters">
+            <input type="text" id="movBuscar" placeholder="Buscar producto u observación...">
+            <select id="movTipo">
+              <option value="">Todos los tipos</option>
+              <option value="Entrada">Entrada</option>
+              <option value="Salida">Salida</option>
+            </select>
+            <input type="date" id="movFechaDesde">
+            <input type="date" id="movFechaHasta">
+            <button class="btn btn-ghost btn-sm" id="movLimpiar"><i class="bi bi-x-circle"></i> Limpiar filtros</button>
+          </div>
+          <div class="table-wrap">
+            <table id="tablaMovimientos"><thead><tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th class="num">Cantidad</th><th class="num">Valor</th><th>Observación</th></tr></thead><tbody></tbody></table>
+          </div>
+          <div id="movEmpty" class="empty"><i class="bi bi-inbox"></i> Aún no hay movimientos registrados.</div>
+        </div>
+      </section>
+
+      <section id="view-ventas" class="view">
+        <h1 class="page-title">Análisis de ventas</h1>
+        <p class="page-sub">Información exclusivamente histórica desde BASE_VENTAS <span class="tag tag-h">Histórico</span></p>
+        <div id="ventasEmpty" class="card"><div class="empty"><i class="bi bi-file-earmark-spreadsheet"></i> Cargue el archivo BASE_VENTAS para visualizar el análisis.</div></div>
+        <div id="ventasContent" style="display:none;">
+          <div class="kpis" id="kpiVentas"></div>
+          <div class="grid-2">
+            <div class="card"><div class="card-title"><i class="bi bi-bar-chart"></i> Ventas por mes (COP)</div><div class="chart-box"><canvas id="chartVentasMes2"></canvas></div></div>
+            <div class="card"><div class="card-title"><i class="bi bi-graph-up"></i> Unidades vendidas por mes</div><div class="chart-box"><canvas id="chartUnidadesMes"></canvas></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="bi bi-table"></i> Detalle mensual</div>
+            <div class="table-wrap">
+              <table id="tablaMensual"><thead><tr><th>Mes</th><th class="num">Unidades</th><th class="num">N.º ventas</th><th class="num">Ventas totales</th><th class="num">Promedio por venta</th></tr></thead><tbody></tbody></table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-analisis" class="view">
+        <h1 class="page-title">Análisis de productos</h1>
+        <p class="page-sub">Ranking y análisis Pareto <span class="tag tag-h">Histórico</span></p>
+        <div id="analisisEmpty" class="card"><div class="empty"><i class="bi bi-file-earmark-spreadsheet"></i> Cargue el archivo BASE_VENTAS para visualizar el análisis.</div></div>
+        <div id="analisisContent" style="display:none;">
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-title"><i class="bi bi-trophy"></i> Ranking por ventas totales</div>
+              <div class="table-wrap">
+                <table id="tablaRanking"><thead><tr><th>#</th><th>Producto</th><th class="num">Ventas</th><th class="num">% Part.</th><th class="num">% Acum.</th></tr></thead><tbody></tbody></table>
+              </div>
+            </div>
+            <div class="card"><div class="card-title"><i class="bi bi-pie-chart"></i> Participación de productos</div><div class="chart-box tall"><canvas id="chartParticipacion"></canvas></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-demanda" class="view">
+        <h1 class="page-title">Análisis de demanda</h1>
+        <p class="page-sub">Modelo bayesiano Gamma-Poisson <span class="tag tag-h">Histórico</span></p>
+        <div id="demandaEmpty" class="card"><div class="empty"><i class="bi bi-file-earmark-spreadsheet"></i> Cargue el archivo BASE_VENTAS para ejecutar el modelo.</div></div>
+        <div id="demandaContent" style="display:none;">
+          <div class="card">
+            <div class="card-title"><i class="bi bi-box-seam"></i> Producto analizado</div>
+            <div class="form-grid">
+              <div class="field"><label>Seleccionar producto</label><select id="demProducto"></select></div>
+            </div>
+          </div>
+          <div class="kpis" id="kpiBayes"></div>
+          <div class="grid-2">
+            <div class="card"><div class="card-title"><i class="bi bi-bar-chart-line"></i> Demanda histórica por mes</div><div class="chart-box"><canvas id="chartDemanda"></canvas></div></div>
+            <div class="card"><div class="card-title"><i class="bi bi-calculator"></i> Modelo bayesiano</div><div id="bayesModelo"></div></div>
+          </div>
+          <div class="hint"><i class="bi bi-info-circle-fill"></i> La estimación de demanda esperada es una <b>referencia cuantitativa</b> obtenida del modelo Gamma-Poisson. No constituye una orden de compra ni una decisión automática.</div>
+        </div>
+      </section>
+
+      <section id="view-proceso" class="view">
+        <h1 class="page-title">Modelo del proceso</h1>
+        <p class="page-sub">Flujo lógico del gemelo digital</p>
+        <div class="card">
+          <div class="flow">
+            <div class="flow-node"><i class="bi bi-box-seam"></i> PRODUCTOS</div>
+            <i class="bi bi-arrow-down flow-arrow"></i>
+            <div class="flow-node"><i class="bi bi-box-arrow-in-down"></i> ENTRADAS</div>
+            <i class="bi bi-arrow-down flow-arrow"></i>
+            <div class="flow-node"><i class="bi bi-clipboard-data"></i> EXISTENCIAS</div>
+            <i class="bi bi-arrow-down flow-arrow"></i>
+            <div class="flow-node"><i class="bi bi-box-arrow-up"></i> SALIDAS</div>
+            <i class="bi bi-arrow-down flow-arrow"></i>
+            <div class="flow-node"><i class="bi bi-arrow-left-right"></i> MOVIMIENTOS</div>
+            <i class="bi bi-arrow-down flow-arrow"></i>
+            <div class="flow-node"><i class="bi bi-speedometer2"></i> INDICADORES</div>
+            <i class="bi bi-arrow-down flow-arrow"></i>
+            <div class="flow-node"><i class="bi bi-graph-up-arrow"></i> ANÁLISIS</div>
+            <i class="bi bi-arrow-down flow-arrow"></i>
+            <div class="flow-node highlight"><i class="bi bi-activity"></i> DEMANDA</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="bi bi-diagram-2"></i> Conexión Excel → Modelo bayesiano</div>
+          <pre style="font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:#334155;line-height:1.7;overflow:auto;">
+ARCHIVO EXCEL
+      ↓
+BASE_VENTAS
+      ↓
+PROCESAMIENTO DE DATOS
+      ↓
+ANÁLISIS HISTÓRICO
+      ↓
+DEMANDA DEL PRODUCTO
+      ↓
+MODELO BAYESIANO
+      ↓
+ESTIMACIÓN DE DEMANDA
+      ↓
+GEMELO DIGITAL
+      ↓
+INDICADORES Y APOYO A LA DECISIÓN</pre>
+        </div>
+      </section>
+
+      <section id="view-parametros" class="view">
+        <h1 class="page-title">Parámetros</h1>
+        <p class="page-sub">Umbrales operativos configurables manualmente</p>
+        <div class="card">
+          <div class="card-title"><i class="bi bi-sliders"></i> Umbrales de inventario</div>
+          <div class="hint"><i class="bi bi-info-circle-fill"></i> Estos valores son <b>parámetros operativos del modelo computacional</b>, no datos históricos de la empresa.</div>
+          <form id="formParametros" class="form-grid">
+            <div class="field"><label>Stock mínimo</label><input type="number" id="parStockMin" min="0" step="1"></div>
+            <div class="field"><label>Punto de reposición</label><input type="number" id="parPuntoRep" min="0" step="1"></div>
+            <div class="field"><label>Stock máximo</label><input type="number" id="parStockMax" min="0" step="1"></div>
+            <div class="field"><button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Guardar parámetros</button></div>
+          </form>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="bi bi-trash"></i> Datos registrados</div>
+          <p style="font-size:13px;color:var(--gris-texto);margin-bottom:12px;">Esta acción elimina únicamente entradas, salidas, existencias iniciales y parámetros guardados en el navegador. No afecta el archivo Excel original.</p>
+          <button class="btn btn-danger" id="btnLimpiar"><i class="bi bi-trash"></i> Limpiar datos registrados</button>
+        </div>
+      </section>
+
+      <section id="view-exportar" class="view">
+        <h1 class="page-title">Exportar información</h1>
+        <p class="page-sub">Genera un archivo Excel con todos los datos del prototipo</p>
+        <div class="card">
+          <div class="card-title"><i class="bi bi-file-earmark-excel"></i> REPORTE_GEMELO_DIGITAL_INVENTARIOS.xlsx</div>
+          <p style="font-size:13px;color:var(--gris-texto);margin-bottom:14px;">Contendrá hojas con: <b>Productos</b>, <b>Ventas históricas</b>, <b>Ventas mensuales</b>, <b>Entradas</b>, <b>Salidas</b>, <b>Movimientos</b>, <b>Existencias</b> e <b>Indicadores</b>.</p>
+          <button class="btn btn-primary" id="btnExportar"><i class="bi bi-download"></i> Exportar información</button>
+        </div>
+      </section>
+
+      <section id="view-alcance" class="view">
+        <h1 class="page-title">Alcance y limitaciones</h1>
+        <p class="page-sub">Prototipo académico de gemelo digital</p>
+        <div class="card">
+          <p style="font-size:13.5px;color:#334155;line-height:1.8;">
+            El presente desarrollo corresponde a un <b>prototipo académico de gemelo digital</b> orientado a la representación, registro y análisis del flujo de entradas y salidas de inventario. Su funcionamiento se basa en información histórica proveniente de archivos Excel (hoja <b>BASE_VENTAS</b>) y en registros operativos introducidos manualmente por el usuario.
+            <br><br>
+            No constituye un sistema ERP integral ni reemplaza los procedimientos administrativos y físicos de la empresa. Los datos operativos se almacenan únicamente en el navegador del usuario (<code>localStorage</code>) y no se envían a ningún servidor.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="bi bi-shield-lock"></i> Seguridad de los datos</div>
+          <ul style="font-size:13px;color:#334155;line-height:1.9;padding-left:20px;">
+            <li>El archivo Excel se procesa localmente en el navegador.</li>
+            <li>No se solicitan contraseñas, cuentas bancarias ni información personal.</li>
+            <li>No hay backend, base de datos externa ni envío de información a terceros.</li>
+          </ul>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modalTitle">Detalle</h3>
+      <button class="modal-close" id="modalClose"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   GEMELO DIGITAL DE INVENTARIOS - Agroferretería Sibarco
+   ========================================================= */
+
+/* ---------- Estado global ---------- */
+const state = {
+  ventas: [],
+  productos: [],
+  ventasMensuales: [],
+  entradas: [],
+  salidas: [],
+  existenciasIniciales: {},
+  parametros: { stockMin: 5, puntoReposicion: 10, stockMax: 100 },
+  excelCargado: false,
+  archivoNombre: ''
+};
+const charts = {};
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+/* ---------- Utilidades ---------- */
+const fmtMoneda = new Intl.NumberFormat('es-CO', { style:'currency', currency:'COP', maximumFractionDigits:0 });
+const fmtNum = new Intl.NumberFormat('es-CO', { maximumFractionDigits:0 });
+const fmtDec = new Intl.NumberFormat('es-CO', { maximumFractionDigits:2, minimumFractionDigits:2 });
+
+function norm(s){
+  return String(s == null ? '' : s)
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function hoyISO(){ return new Date().toISOString().slice(0,10); }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function toast(msg, tipo='ok'){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast ' + tipo;
+  const icon = tipo==='ok' ? 'bi-check-circle-fill' : tipo==='err' ? 'bi-x-circle-fill' : 'bi-exclamation-triangle-fill';
+  el.innerHTML = '<i class="bi ' + icon + '"></i><span>' + esc(msg) + '</span>';
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateX(20px)'; setTimeout(()=>el.remove(),250); }, 3200);
+}
+
+function abrirModal(titulo, html){
+  document.getElementById('modalTitle').textContent = titulo;
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('modalBg').classList.add('show');
+}
+function cerrarModal(){ document.getElementById('modalBg').classList.remove('show'); }
+document.getElementById('modalClose').onclick = cerrarModal;
+document.getElementById('modalBg').onclick = e => { if(e.target.id==='modalBg') cerrarModal(); };
+
+/* ---------- Persistencia ---------- */
+function guardarLocalStorage(){
+  try{
+    localStorage.setItem('gd_entradas', JSON.stringify(state.entradas));
+    localStorage.setItem('gd_salidas', JSON.stringify(state.salidas));
+    localStorage.setItem('gd_existencias_ini', JSON.stringify(state.existenciasIniciales));
+    localStorage.setItem('gd_parametros', JSON.stringify(state.parametros));
+  }catch(e){ console.error(e); }
+}
+function cargarLocalStorage(){
+  try{
+    state.entradas = JSON.parse(localStorage.getItem('gd_entradas')||'[]');
+    state.salidas  = JSON.parse(localStorage.getItem('gd_salidas')||'[]');
+    state.existenciasIniciales = JSON.parse(localStorage.getItem('gd_existencias_ini')||'{}');
+    const p = JSON.parse(localStorage.getItem('gd_parametros')||'null');
+    if(p) state.parametros = Object.assign(state.parametros, p);
+  }catch(e){ console.error('LS', e); }
+}
+
+/* =========================================================
+   IMPORTACIÓN DE EXCEL – versión robusta
+   Detecta encabezados en cualquier fila y mapea columnas
+   por nombre, no por posición.
+   ========================================================= */
+document.getElementById('btnImportar').onclick = () => document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange = e => {
+  const f = e.target.files[0];
+  if(f) cargarExcel(f);
+  e.target.value = '';
+};
+
+function derivarMes(fechaStr){
+  if(!fechaStr) return '';
+  let d = null;
+  if(fechaStr instanceof Date) d = fechaStr;
+  else if(/^\d{4}-\d{2}-\d{2}/.test(fechaStr)) d = new Date(fechaStr);
+  else if(/^\d{1,2}\/\d{1,2}\/\d{4}/.test(fechaStr)){
+    const [dd,mm,yy] = fechaStr.split('/');
+    d = new Date(+yy, +mm-1, +dd);
+  }
+  if(!d || isNaN(d)) return '';
+  return MESES[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+function cargarExcel(file){
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try{
+      const data = new Uint8Array(ev.target.result);
+      const wb = XLSX.read(data, { type:'array', cellDates:true, cellNF:false, cellText:false });
+
+      console.log('%c📋 Hojas del archivo:', 'color:#0b4f9e;font-weight:bold;', wb.SheetNames);
+
+      // 1. Localizar hoja BASE_VENTAS
+      let sheetName = wb.SheetNames.find(n => norm(n) === 'base_ventas');
+      if(!sheetName) sheetName = wb.SheetNames.find(n => norm(n).includes('base') && norm(n).includes('venta'));
+      if(!sheetName) sheetName = wb.SheetNames.find(n => norm(n).includes('venta'));
+
+      if(!sheetName){
+        let html = '<p style="color:var(--err);font-size:13px;"><b>No se encontró la hoja BASE_VENTAS.</b></p>';
+        html += '<p style="font-size:13px;"><b>Hojas encontradas:</b></p><ul style="font-size:13px;padding-left:20px;">';
+        wb.SheetNames.forEach(n => html += '<li>' + esc(n) + '</li>');
+        html += '</ul>';
+        abrirModal('Diagnóstico de lectura', html);
+        toast('No se encontró la hoja BASE_VENTAS en el archivo.', 'err');
+        return;
+      }
+      console.log('%c✓ Hoja seleccionada:', 'color:#15803d;font-weight:bold;', sheetName);
+
+      const ws = wb.Sheets[sheetName];
+      if(!ws || !ws['!ref']){ toast('La hoja "' + sheetName + '" está vacía.', 'err'); return; }
+
+      // 2. Volcar TODA la hoja como matriz
+      const matrix = XLSX.utils.sheet_to_json(ws, { header:1, defval:'', blankrows:false, raw:true });
+      console.log('%c📦 Filas leídas de la hoja:', 'color:#0b4f9e;font-weight:bold;', matrix.length);
+      console.log('Primeras 4 filas (crudas):', matrix.slice(0,4));
+
+      if(matrix.length < 2){ toast('La hoja no contiene datos suficientes.', 'err'); return; }
+
+      // 3. Detectar fila de encabezados (busca "producto" y "cantidad")
+      let headerIdx = -1;
+      for(let i = 0; i < Math.min(matrix.length, 20); i++){
+        const fila = (matrix[i] || []).map(v => norm(String(v)));
+        const tieneProd = fila.some(v => v.includes('producto') || v.includes('descripcion'));
+        const tieneCant = fila.some(v => v.includes('cantidad'));
+        if(tieneProd && tieneCant){ headerIdx = i; break; }
+      }
+
+      if(headerIdx === -1){
+        let html = '<p style="color:var(--err);font-size:13px;"><b>No se detectó la fila de encabezados.</b></p>';
+        html += '<p style="font-size:13px;">Primeras filas de la hoja "<b>' + esc(sheetName) + '</b>":</p>';
+        html += '<div class="table-wrap"><table><thead><tr><th>Fila</th><th>Contenido</th></tr></thead><tbody>';
+        for(let i = 0; i < Math.min(matrix.length, 15); i++){
+          html += '<tr><td>' + (i+1) + '</td><td>' + esc((matrix[i]||[]).join(' | ')) + '</td></tr>';
+        }
+        html += '</tbody></table></div>';
+        abrirModal('Diagnóstico de encabezados', html);
+        toast('No se detectaron los encabezados esperados.', 'err');
+        return;
+      }
+
+      const headers = (matrix[headerIdx] || []).map(h => String(h == null ? '' : h).trim());
+      console.log('%c📌 Encabezados detectados en fila Excel #', 'color:#0b4f9e;font-weight:bold;', (headerIdx+1));
+      console.log(headers);
+
+      // 4. Mapear columnas por nombre
+      const col = {};
+      headers.forEach((h, i) => {
+        const n = norm(h);
+        if(col.id       === undefined && n === 'id') col.id = i;
+        else if(col.fecha    === undefined && n.startsWith('fecha')) col.fecha = i;
+        else if(col.mes      === undefined && (n === 'mes' || n.startsWith('mes '))) col.mes = i;
+        else if(col.cantidad === undefined && (n.startsWith('cantidad') || n === 'unidades')) col.cantidad = i;
+        else if(col.producto === undefined && (n.includes('producto') || n.includes('descripcion') || n.includes('articulo'))) col.producto = i;
+        else if(col.valor    === undefined && (n.includes('valor') || n.includes('total') || n.includes('precio'))) col.valor = i;
+      });
+
+      console.log('%c📊 Mapeo de columnas:', 'color:#0b4f9e;font-weight:bold;', col);
+
+      const faltantes = [];
+      if(col.producto === undefined) faltantes.push('Producto / Descripción');
+      if(col.cantidad === undefined) faltantes.push('Cantidad');
+
+      if(faltantes.length){
+        let html = '<p style="color:var(--err);font-size:13px;"><b>No se pudieron detectar estas columnas:</b> ' + faltantes.join(', ') + '</p>';
+        html += '<p style="font-size:13px;"><b>Encabezados encontrados en la fila ' + (headerIdx+1) + ':</b></p>';
+        html += '<div class="table-wrap"><table><thead><tr><th>Col</th><th>Encabezado</th></tr></thead><tbody>';
+        headers.forEach((h,i) => { html += '<tr><td>' + String.fromCharCode(65+i) + '</td><td>' + esc(h) + '</td></tr>'; });
+        html += '</tbody></table></div>';
+        abrirModal('Diagnóstico de columnas', html);
+        toast('No se detectaron las columnas requeridas.', 'err');
+        return;
+      }
+
+      // 5. Procesar filas de datos
+      const ventas = [];
+      let invalidos = 0;
+
+      for(let i = headerIdx + 1; i < matrix.length; i++){
+        const fila = matrix[i] || [];
+        const prod = String(fila[col.producto] == null ? '' : fila[col.producto]).trim();
+        const cantRaw = fila[col.cantidad];
+        const cant = Number(String(cantRaw == null ? '' : cantRaw).replace(/[^\d.-]/g,''));
+        if(!prod || !isFinite(cant) || cant <= 0){ invalidos++; continue; }
+
+        const valRaw = col.valor !== undefined ? fila[col.valor] : 0;
+        const val = Number(String(valRaw == null ? '' : valRaw).replace(/[^\d.-]/g,''));
+
+        // Fecha
+        let fechaStr = '';
+        if(col.fecha !== undefined){
+          const rawF = fila[col.fecha];
+          if(rawF instanceof Date){ fechaStr = rawF.toISOString().slice(0,10); }
+          else if(typeof rawF === 'number' && rawF > 25000){
+            const d = new Date(Math.round((rawF - 25569) * 86400 * 1000));
+            fechaStr = isNaN(d) ? '' : d.toISOString().slice(0,10);
+          } else if(rawF != null && rawF !== ''){
+            fechaStr = String(rawF).trim();
+          }
+        }
+
+        // Mes (columna de la hoja o derivado)
+        let mes = '';
+        if(col.mes !== undefined && fila[col.mes] != null && fila[col.mes] !== ''){
+          mes = String(fila[col.mes]).trim();
+        }
+        if(!mes && fechaStr) mes = derivarMes(fechaStr);
+        if(!mes) mes = 'Sin mes';
+
+        ventas.push({
+          id: col.id !== undefined ? fila[col.id] : (i - headerIdx),
+          fecha: fechaStr,
+          mes: mes,
+          cantidad: cant,
+          producto: prod,
+          valor: isFinite(val) ? val : 0
+        });
+      }
+
+      console.log('%c✓ Registros válidos:', 'color:#15803d;font-weight:bold;', ventas.length);
+      console.log('%c⚠ Filas omitidas:', 'color:#b45309;font-weight:bold;', invalidos);
+      console.log('Primeros 3 registros:', ventas.slice(0,3));
+
+      if(!ventas.length){ toast('No se encontraron registros válidos. Se omitieron ' + invalidos + ' filas.', 'err'); return; }
+
+      state.ventas = ventas;
+      state.excelCargado = true;
+      state.archivoNombre = file.name;
+
+      recalcularTodo();
+
+      document.getElementById('archivoInfo').innerHTML =
+        '<i class="bi bi-check-circle-fill" style="color:var(--ok);"></i> ' +
+        esc(file.name) + ' — hoja "' + esc(sheetName) + '" — ' +
+        fmtNum.format(ventas.length) + ' registros';
+
+      toast('Archivo cargado correctamente. ' + fmtNum.format(ventas.length) + ' registros procesados.', 'ok');
+      if(invalidos > 0) toast(invalidos + ' filas fueron omitidas.', 'warn');
+
+    }catch(err){
+      console.error('❌ Error en cargarExcel:', err);
+      toast('Error al leer el archivo: ' + err.message, 'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* =========================================================
+   CÁLCULOS
+   ========================================================= */
+function recalcularTodo(){
+  state.productos = calcularProductos();
+  state.ventasMensuales = calcularVentasMensuales();
+  renderTodo();
+}
+
+function calcularProductos(){
+  const map = {};
+  state.ventas.forEach(v => {
+    if(!map[v.producto]) map[v.producto] = { producto:v.producto, unidades:0, n:0, total:0 };
+    map[v.producto].unidades += v.cantidad;
+    map[v.producto].n += 1;
+    map[v.producto].total += v.valor;
+  });
+  const totalGen = Object.values(map).reduce((s,p)=>s+p.total,0);
+  const arr = Object.values(map).map(p => ({ ...p, participacion: totalGen > 0 ? (p.total/totalGen*100) : 0 }));
+  arr.sort((a,b)=> b.total - a.total);
+  return arr;
+}
+
+function calcularVentasMensuales(){
+  const map = {};
+  state.ventas.forEach(v => {
+    const k = v.mes || 'Sin mes';
+    if(!map[k]) map[k] = { mes:k, unidades:0, n:0, total:0, minFecha:v.fecha||'' };
+    map[k].unidades += v.cantidad;
+    map[k].n += 1;
+    map[k].total += v.valor;
+    if(v.fecha && (!map[k].minFecha || v.fecha < map[k].minFecha)) map[k].minFecha = v.fecha;
+  });
+  // Orden cronológico por nombre de mes
+  const ordenMes = { 'Enero':1,'Febrero':2,'Marzo':3,'Abril':4,'Mayo':5,'Junio':6,'Julio':7,'Agosto':8,'Septiembre':9,'Octubre':10,'Noviembre':11,'Diciembre':12 };
+  return Object.values(map).sort((a,b)=>{
+    const [ma, ya] = a.mes.split(' ');
+    const [mb, yb] = b.mes.split(' ');
+    const oa = (Number(ya)||0)*100 + (ordenMes[ma]||0);
+    const ob = (Number(yb)||0)*100 + (ordenMes[mb]||0);
+    return oa - ob;
+  });
+}
+
+function calcularExistencias(){
+  const prods = new Set();
+  state.ventas.forEach(v => prods.add(v.producto));
+  state.entradas.forEach(e => prods.add(e.producto));
+  state.salidas.forEach(s => prods.add(s.producto));
+  Object.keys(state.existenciasIniciales).forEach(p => prods.add(p));
+
+  const out = [];
+  prods.forEach(p => {
+    const iniRaw = state.existenciasIniciales[p];
+    const tieneIni = iniRaw !== undefined && iniRaw !== null && iniRaw !== '';
+    const ent = state.entradas.filter(e => e.producto === p).reduce((s,e)=> s + e.cantidad, 0);
+    const sal = state.salidas.filter(s => s.producto === p).reduce((s,x)=> s + x.cantidad, 0);
+    const fin = tieneIni ? (Number(iniRaw) + ent - sal) : null;
+
+    let estado = 'Sin configurar';
+    if(fin !== null){
+      if(fin <= 0) estado = 'Agotado';
+      else if(fin <= state.parametros.stockMin) estado = 'Reposición';
+      else if(fin <= state.parametros.puntoReposicion) estado = 'Seguimiento';
+      else estado = 'Disponible';
+    }
+    out.push({ producto:p, ini: tieneIni?Number(iniRaw):null, ent, sal, fin, estado });
+  });
+  out.sort((a,b)=> a.producto.localeCompare(b.producto));
+  return out;
+}
+
+function calcularMovimientos(){
+  const movs = [];
+  state.entradas.forEach(e => movs.push({ fecha:e.fecha, tipo:'Entrada', producto:e.producto, cantidad:e.cantidad, valor:0, obs:e.obs||'' }));
+  state.salidas.forEach(s => movs.push({ fecha:s.fecha, tipo:'Salida', producto:s.producto, cantidad:s.cantidad, valor:s.valor, obs:s.obs||'' }));
+  movs.sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||''));
+  return movs;
+}
+
+function calcularPareto(){
+  const arr = [...state.productos].sort((a,b)=> b.total - a.total);
+  let acum = 0;
+  return arr.map(p => { acum += p.participacion; return { ...p, acumulado: acum }; });
+}
+
+function calcularModeloBayesiano(producto){
+  const mensual = {};
+  state.ventas.filter(v => v.producto === producto).forEach(v => {
+    const k = v.mes || 'Sin mes';
+    mensual[k] = (mensual[k]||0) + v.cantidad;
+  });
+  const orden = state.ventasMensuales.map(m=>m.mes);
+  const meses = Array.from(new Set([...orden.filter(m=> m in mensual), ...Object.keys(mensual)]));
+  const demanda = meses.map(m => ({ mes:m, demanda: mensual[m]||0 }));
+
+  const n = demanda.length;
+  const suma = demanda.reduce((s,d)=> s + d.demanda, 0);
+  const a0 = 1, b0 = 1;
+  const an = a0 + suma;
+  const bn = b0 + n;
+  const esperado = n > 0 ? (an/bn) : 0;
+
+  return { demanda, n, suma, a0, b0, an, bn, esperado };
+}
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+function renderTodo(){
+  renderDashboard();
+  renderProductos();
+  renderSelectsProductos();
+  renderEntradas();
+  renderSalidas();
+  renderExistencias();
+  renderMovimientos();
+  renderVentas();
+  renderAnalisis();
+  renderDemanda();
+  renderParametros();
+}
+
+function renderDashboard(){
+  const empty = document.getElementById('dashEmpty');
+  const cont  = document.getElementById('dashContent');
+  if(!state.excelCargado && !state.entradas.length && !state.salidas.length){
+    empty.style.display=''; cont.style.display='none'; return;
+  }
+  empty.style.display='none'; cont.style.display='';
+
+  const totalProductos = state.productos.length;
+  const unidadesHist = state.ventas.reduce((s,v)=> s + v.cantidad, 0);
+  const nVentas = state.ventas.length;
+  const totalVentas = state.ventas.reduce((s,v)=> s + v.valor, 0);
+  const totalEntradas = state.entradas.reduce((s,e)=> s + e.cantidad, 0);
+  const totalSalidas = state.salidas.reduce((s,x)=> s + x.cantidad, 0);
+  const nMovs = state.entradas.length + state.salidas.length;
+
+  let prodMayorCant = null, prodMayorFact = null;
+  if(state.productos.length){
+    prodMayorCant = [...state.productos].sort((a,b)=> b.unidades - a.unidades)[0];
+    prodMayorFact = [...state.productos].sort((a,b)=> b.total - a.total)[0];
+  }
+
+  const kpis = [
+    { icon:'bi-box-seam', t:'Productos registrados', v: fmtNum.format(totalProductos), f:'Desde Excel' },
+    { icon:'bi-basket', t:'Unidades vendidas', v: fmtNum.format(unidadesHist), f:'Histórico' },
+    { icon:'bi-receipt', t:'Registros de ventas', v: fmtNum.format(nVentas), f:'Histórico' },
+    { icon:'bi-cash-stack', t:'Ventas acumuladas', v: fmtMoneda.format(totalVentas), f:'Histórico' },
+    { icon:'bi-box-arrow-in-down', t:'Total entradas', v: fmtNum.format(totalEntradas), f:'Operativo' },
+    { icon:'bi-box-arrow-up', t:'Total salidas', v: fmtNum.format(totalSalidas), f:'Operativo' },
+    { icon:'bi-arrow-left-right', t:'Movimientos', v: fmtNum.format(nMovs), f:'Operativo' },
+    { icon:'bi-trophy', t:'Producto más vendido (uds)', v: prodMayorCant ? prodMayorCant.producto : '—', v_sm:true, f: prodMayorCant ? fmtNum.format(prodMayorCant.unidades) + ' unidades' : '' },
+    { icon:'bi-currency-dollar', t:'Mayor facturación', v: prodMayorFact ? prodMayorFact.producto : '—', v_sm:true, f: prodMayorFact ? fmtMoneda.format(prodMayorFact.total) : '' }
+  ];
+
+  document.getElementById('kpiGrid').innerHTML = kpis.map(k =>
+    '<div class="kpi"><div class="kpi-head"><i class="bi ' + k.icon + '"></i> ' + esc(k.t) + '</div>' +
+    '<div class="kpi-value ' + (k.v_sm?'sm':'') + '">' + esc(k.v) + '</div>' +
+    '<div class="kpi-foot">' + esc(k.f||'') + '</div></div>'
+  ).join('');
+
+  const meses = state.ventasMensuales.map(m => m.mes);
+  const totales = state.ventasMensuales.map(m => m.total);
+
+  dibujar('chartVentasMes', 'bar', {
+    labels: meses,
+    datasets:[{ label:'Ventas (COP)', data: totales, backgroundColor:'#1565c0', borderRadius:6, maxBarThickness:44 }]
+  }, { plugins:{ legend:{display:false} }, scales:{ y:{ ticks:{ callback:v=> fmtMoneda.format(v) } } } });
+
+  const top = [...state.productos].sort((a,b)=> b.total - a.total).slice(0,8);
+  dibujar('chartTopProductos', 'bar', {
+    labels: top.map(p => p.producto.length>22 ? p.producto.slice(0,22)+'…' : p.producto),
+    datasets:[{ label:'Facturación', data: top.map(p=> p.total), backgroundColor:'#0b4f9e', borderRadius:6 }]
+  }, {
+    indexAxis:'y',
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c => fmtMoneda.format(c.parsed.x) } } },
+    scales:{ x:{ ticks:{ callback:v=> fmtMoneda.format(v) } } }
+  });
+}
+
+function renderProductos(){
+  const tbody = document.querySelector('#tablaProductos tbody');
+  const empty = document.getElementById('prodEmpty');
+  const tabla = document.getElementById('tablaProductos');
+
+  if(!state.productos.length){ tbody.innerHTML=''; tabla.style.display='none'; empty.style.display=''; return; }
+  tabla.style.display=''; empty.style.display='none';
+
+  const filtro = norm(document.getElementById('filtroProducto').value);
+  const orden = document.getElementById('ordenProducto').value;
+
+  let arr = state.productos.filter(p => norm(p.producto).includes(filtro));
+  if(orden === 'total') arr.sort((a,b)=> b.total - a.total);
+  else if(orden === 'unidades') arr.sort((a,b)=> b.unidades - a.unidades);
+  else if(orden === 'n') arr.sort((a,b)=> b.n - a.n);
+  else arr.sort((a,b)=> a.producto.localeCompare(b.producto));
+
+  tbody.innerHTML = arr.map((p,i) =>
+    '<tr><td>' + (i+1) + '</td><td><b>' + esc(p.producto) + '</b></td>' +
+    '<td class="num">' + fmtNum.format(p.unidades) + '</td>' +
+    '<td class="num">' + fmtNum.format(p.n) + '</td>' +
+    '<td class="num">' + fmtMoneda.format(p.total) + '</td>' +
+    '<td class="num">' + fmtDec.format(p.participacion) + '%</td>' +
+    '<td><button class="btn btn-ghost btn-sm" data-detalle="' + esc(p.producto) + '"><i class="bi bi-eye"></i> Ver detalle</button></td></tr>'
+  ).join('');
+
+  tbody.querySelectorAll('[data-detalle]').forEach(b => { b.onclick = () => verDetalleProducto(b.dataset.detalle); });
+}
+
+function verDetalleProducto(nombre){
+  const p = state.productos.find(x => x.producto === nombre);
+  if(!p) return;
+  const modelo = calcularModeloBayesiano(nombre);
+  const movs = calcularMovimientos().filter(m => m.producto === nombre).slice(0,10);
+  const exi = calcularExistencias().find(e => e.producto === nombre);
+
+  let html = '<div class="kpis" style="margin-bottom:14px;">' +
+    '<div class="kpi"><div class="kpi-head"><i class="bi bi-basket"></i> Unidades</div><div class="kpi-value">' + fmtNum.format(p.unidades) + '</div></div>' +
+    '<div class="kpi"><div class="kpi-head"><i class="bi bi-receipt"></i> N.º ventas</div><div class="kpi-value">' + fmtNum.format(p.n) + '</div></div>' +
+    '<div class="kpi"><div class="kpi-head"><i class="bi bi-cash-stack"></i> Ventas totales</div><div class="kpi-value sm">' + fmtMoneda.format(p.total) + '</div></div>' +
+    '<div class="kpi"><div class="kpi-head"><i class="bi bi-pie-chart"></i> Participación</div><div class="kpi-value">' + fmtDec.format(p.participacion) + '%</div></div>' +
+  '</div>';
+
+  html += '<h4 style="font-size:13px;color:var(--azul);margin:14px 0 8px;">Demanda histórica por mes</h4>';
+  if(modelo.demanda.length){
+    html += '<div class="table-wrap"><table><thead><tr><th>Mes</th><th class="num">Demanda</th></tr></thead><tbody>' +
+      modelo.demanda.map(d => '<tr><td>' + esc(d.mes) + '</td><td class="num">' + fmtNum.format(d.demanda) + '</td></tr>').join('') +
+      '</tbody></table></div>';
+  } else html += '<p style="font-size:13px;color:var(--gris-texto);">Sin datos.</p>';
+
+  if(exi){
+    html += '<h4 style="font-size:13px;color:var(--azul);margin:14px 0 8px;">Existencias</h4>' +
+      '<p style="font-size:13px;">Existencia inicial: <b>' + (exi.ini === null ? 'No configurada' : fmtNum.format(exi.ini)) + '</b> | Entradas: <b>' + fmtNum.format(exi.ent) + '</b> | Salidas: <b>' + fmtNum.format(exi.sal) + '</b> | Final: <b>' + (exi.fin === null ? '—' : fmtNum.format(exi.fin)) + '</b> | Estado: <b>' + esc(exi.estado) + '</b></p>';
+  }
+
+  if(movs.length){
+    html += '<h4 style="font-size:13px;color:var(--azul);margin:14px 0 8px;">Últimos movimientos operativos</h4>' +
+      '<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Tipo</th><th class="num">Cantidad</th><th class="num">Valor</th></tr></thead><tbody>' +
+      movs.map(m => '<tr><td>' + esc(m.fecha) + '</td><td>' + esc(m.tipo) + '</td><td class="num">' + fmtNum.format(m.cantidad) + '</td><td class="num">' + fmtMoneda.format(m.valor) + '</td></tr>').join('') +
+      '</tbody></table></div>';
+  }
+
+  abrirModal('Detalle del producto: ' + nombre, html);
+}
+
+function renderSelectsProductos(){
+  const opciones = state.productos.map(p => '<option value="' + esc(p.producto) + '">' + esc(p.producto) + '</option>').join('');
+  ['entProducto','salProducto','exiProducto'].forEach(id => {
+    const sel = document.getElementById(id);
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">— Seleccione un producto —</option>' + opciones;
+    if(prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+  });
+}
+
+function renderEntradas(){
+  const tbody = document.querySelector('#tablaEntradas tbody');
+  const empty = document.getElementById('entEmpty');
+  const tabla = document.getElementById('tablaEntradas');
+  if(!state.entradas.length){ tbody.innerHTML=''; tabla.style.display='none'; empty.style.display=''; return; }
+  tabla.style.display=''; empty.style.display='none';
+  const arr = [...state.entradas].sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||''));
+  tbody.innerHTML = arr.map(e =>
+    '<tr><td>' + esc(e.fecha) + '</td><td>' + esc(e.producto) + '</td>' +
+    '<td class="num">' + fmtNum.format(e.cantidad) + '</td>' +
+    '<td>' + esc(e.obs||'—') + '</td>' +
+    '<td><button class="btn btn-ghost btn-sm" data-del="' + e.id + '"><i class="bi bi-trash"></i></button></td></tr>'
+  ).join('');
+  tbody.querySelectorAll('[data-del]').forEach(b => {
+    b.onclick = () => {
+      if(!confirm('¿Eliminar este registro de entrada?')) return;
+      state.entradas = state.entradas.filter(x => x.id !== b.dataset.del);
+      guardarLocalStorage(); renderTodo(); toast('Entrada eliminada.', 'ok');
+    };
+  });
+}
+
+document.getElementById('formEntrada').onsubmit = e => {
+  e.preventDefault();
+  const fecha = document.getElementById('entFecha').value;
+  const producto = document.getElementById('entProducto').value;
+  const cantidad = Number(document.getElementById('entCantidad').value);
+  const obs = document.getElementById('entObs').value.trim();
+  if(!fecha || !producto || !isFinite(cantidad) || cantidad <= 0){ toast('⚠ Revise la información ingresada.', 'err'); return; }
+  state.entradas.push({ id:uid(), fecha, producto, cantidad, obs });
+  guardarLocalStorage();
+  e.target.reset();
+  document.getElementById('entFecha').value = hoyISO();
+  renderTodo();
+  toast('Entrada registrada correctamente.', 'ok');
+};
+
+function renderSalidas(){
+  const tbody = document.querySelector('#tablaSalidas tbody');
+  const empty = document.getElementById('salEmpty');
+  const tabla = document.getElementById('tablaSalidas');
+  if(!state.salidas.length){ tbody.innerHTML=''; tabla.style.display='none'; empty.style.display=''; return; }
+  tabla.style.display=''; empty.style.display='none';
+  const arr = [...state.salidas].sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||''));
+  tbody.innerHTML = arr.map(s =>
+    '<tr><td>' + esc(s.fecha) + '</td><td>' + esc(s.producto) + '</td>' +
+    '<td class="num">' + fmtNum.format(s.cantidad) + '</td>' +
+    '<td class="num">' + fmtMoneda.format(s.valor) + '</td>' +
+    '<td>' + esc(s.obs||'—') + '</td>' +
+    '<td><button class="btn btn-ghost btn-sm" data-del="' + s.id + '"><i class="bi bi-trash"></i></button></td></tr>'
+  ).join('');
+  tbody.querySelectorAll('[data-del]').forEach(b => {
+    b.onclick = () => {
+      if(!confirm('¿Eliminar este registro de salida?')) return;
+      state.salidas = state.salidas.filter(x => x.id !== b.dataset.del);
+      guardarLocalStorage(); renderTodo(); toast('Salida eliminada.', 'ok');
+    };
+  });
+}
+
+document.getElementById('formSalida').onsubmit = e => {
+  e.preventDefault();
+  const fecha = document.getElementById('salFecha').value;
+  const producto = document.getElementById('salProducto').value;
+  const cantidad = Number(document.getElementById('salCantidad').value);
+  const valor = Number(document.getElementById('salValor').value);
+  const obs = document.getElementById('salObs').value.trim();
+  if(!fecha || !producto || !isFinite(cantidad) || cantidad <= 0 || !isFinite(valor) || valor < 0){ toast('⚠ Revise la información ingresada.', 'err'); return; }
+  state.salidas.push({ id:uid(), fecha, producto, cantidad, valor, obs });
+  guardarLocalStorage();
+  e.target.reset();
+  document.getElementById('salFecha').value = hoyISO();
+  renderTodo();
+  toast('Salida registrada correctamente.', 'ok');
+};
+
+function renderExistencias(){
+  const tbody = document.querySelector('#tablaExistencias tbody');
+  const empty = document.getElementById('exiEmpty');
+  const tabla = document.getElementById('tablaExistencias');
+  const arr = calcularExistencias();
+  if(!arr.length){ tbody.innerHTML=''; tabla.style.display='none'; empty.style.display=''; return; }
+  tabla.style.display=''; empty.style.display='none';
+
+  const clsEstado = { 'Disponible':'tag-disponible', 'Seguimiento':'tag-seguimiento', 'Reposición':'tag-reposicion', 'Agotado':'tag-agotado', 'Sin configurar':'tag-sin' };
+
+  tbody.innerHTML = arr.map(e =>
+    '<tr><td><b>' + esc(e.producto) + '</b></td>' +
+    '<td class="num">' + (e.ini === null ? '<span style="color:#94a3b8;">No configurada</span>' : fmtNum.format(e.ini)) + '</td>' +
+    '<td class="num">' + fmtNum.format(e.ent) + '</td>' +
+    '<td class="num">' + fmtNum.format(e.sal) + '</td>' +
+    '<td class="num"><b>' + (e.fin === null ? '—' : fmtNum.format(e.fin)) + '</b></td>' +
+    '<td><span class="tag ' + (clsEstado[e.estado]||'tag-sin') + '">' + esc(e.estado) + '</span></td></tr>'
+  ).join('');
+}
+
+document.getElementById('formExistencia').onsubmit = e => {
+  e.preventDefault();
+  const prod = document.getElementById('exiProducto').value;
+  const cant = Number(document.getElementById('exiCantidad').value);
+  if(!prod || !isFinite(cant) || cant < 0){ toast('⚠ Revise la información ingresada.', 'err'); return; }
+  state.existenciasIniciales[prod] = cant;
+  guardarLocalStorage();
+  e.target.reset();
+  renderTodo();
+  toast('Existencia inicial guardada (parámetro operativo).', 'ok');
+};
+
+function renderMovimientos(){
+  const tbody = document.querySelector('#tablaMovimientos tbody');
+  const empty = document.getElementById('movEmpty');
+  const tabla = document.getElementById('tablaMovimientos');
+
+  const q = norm(document.getElementById('movBuscar').value);
+  const tipo = document.getElementById('movTipo').value;
+  const desde = document.getElementById('movFechaDesde').value;
+  const hasta = document.getElementById('movFechaHasta').value;
+
+  let arr = calcularMovimientos();
+  if(q) arr = arr.filter(m => norm(m.producto).includes(q) || norm(m.obs).includes(q));
+  if(tipo) arr = arr.filter(m => m.tipo === tipo);
+  if(desde) arr = arr.filter(m => (m.fecha||'') >= desde);
+  if(hasta) arr = arr.filter(m => (m.fecha||'') <= hasta);
+
+  if(!arr.length){ tbody.innerHTML=''; tabla.style.display='none'; empty.style.display=''; return; }
+  tabla.style.display=''; empty.style.display='none';
+
+  tbody.innerHTML = arr.map(m =>
+    '<tr><td>' + esc(m.fecha) + '</td>' +
+    '<td><span class="tag ' + (m.tipo==='Entrada'?'tag-o':'tag-h') + '">' + esc(m.tipo) + '</span></td>' +
+    '<td>' + esc(m.producto) + '</td>' +
+    '<td class="num">' + fmtNum.format(m.cantidad) + '</td>' +
+    '<td class="num">' + (m.valor? fmtMoneda.format(m.valor) : '—') + '</td>' +
+    '<td>' + esc(m.obs||'—') + '</td></tr>'
+  ).join('');
+}
+['movBuscar','movTipo','movFechaDesde','movFechaHasta'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderMovimientos);
+  document.getElementById(id).addEventListener('change', renderMovimientos);
+});
+document.getElementById('movLimpiar').onclick = () => {
+  document.getElementById('movBuscar').value = '';
+  document.getElementById('movTipo').value = '';
+  document.getElementById('movFechaDesde').value = '';
+  document.getElementById('movFechaHasta').value = '';
+  renderMovimientos();
+};
+
+function renderVentas(){
+  const empty = document.getElementById('ventasEmpty');
+  const cont = document.getElementById('ventasContent');
+  if(!state.excelCargado){ empty.style.display=''; cont.style.display='none'; return; }
+  empty.style.display='none'; cont.style.display='';
+
+  const totalVentas = state.ventas.reduce((s,v)=> s + v.valor, 0);
+  const totalUds = state.ventas.reduce((s,v)=> s + v.cantidad, 0);
+  const n = state.ventas.length;
+  const prom = n > 0 ? totalVentas/n : 0;
+
+  let mesMayor = null, mesMenor = null, prodMayorUds = null, prodMayorFact = null;
+  if(state.ventasMensuales.length){
+    mesMayor = [...state.ventasMensuales].sort((a,b)=> b.total - a.total)[0];
+    mesMenor = [...state.ventasMensuales].sort((a,b)=> a.total - b.total)[0];
+  }
+  if(state.productos.length){
+    prodMayorUds = [...state.productos].sort((a,b)=> b.unidades - a.unidades)[0];
+    prodMayorFact = [...state.productos].sort((a,b)=> b.total - a.total)[0];
+  }
+
+  const kpis = [
+    { icon:'bi-cash-stack', t:'Ventas totales', v: fmtMoneda.format(totalVentas) },
+    { icon:'bi-basket', t:'Unidades vendidas', v: fmtNum.format(totalUds) },
+    { icon:'bi-receipt', t:'Registros', v: fmtNum.format(n) },
+    { icon:'bi-calculator', t:'Promedio por venta', v: fmtMoneda.format(prom) },
+    { icon:'bi-arrow-up-circle', t:'Mes mayor facturación', v: mesMayor ? mesMayor.mes : '—', v_sm:true, f: mesMayor ? fmtMoneda.format(mesMayor.total) : '' },
+    { icon:'bi-arrow-down-circle', t:'Mes menor facturación', v: mesMenor ? mesMenor.mes : '—', v_sm:true, f: mesMenor ? fmtMoneda.format(mesMenor.total) : '' },
+    { icon:'bi-trophy', t:'Producto más vendido (uds)', v: prodMayorUds ? prodMayorUds.producto : '—', v_sm:true, f: prodMayorUds ? fmtNum.format(prodMayorUds.unidades) + ' uds' : '' },
+    { icon:'bi-currency-dollar', t:'Mayor facturación', v: prodMayorFact ? prodMayorFact.producto : '—', v_sm:true, f: prodMayorFact ? fmtMoneda.format(prodMayorFact.total) : '' }
+  ];
+  document.getElementById('kpiVentas').innerHTML = kpis.map(k =>
+    '<div class="kpi"><div class="kpi-head"><i class="bi ' + k.icon + '"></i> ' + esc(k.t) + '</div>' +
+    '<div class="kpi-value ' + (k.v_sm?'sm':'') + '">' + esc(k.v) + '</div>' +
+    '<div class="kpi-foot">' + esc(k.f||'') + '</div></div>'
+  ).join('');
+
+  const meses = state.ventasMensuales.map(m => m.mes);
+  dibujar('chartVentasMes2', 'bar', {
+    labels: meses,
+    datasets:[{ label:'Ventas', data: state.ventasMensuales.map(m=> m.total), backgroundColor:'#1565c0', borderRadius:6 }]
+  }, { plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c => fmtMoneda.format(c.parsed.y) } } },
+       scales:{ y:{ ticks:{ callback:v=> fmtMoneda.format(v) } } } });
+
+  dibujar('chartUnidadesMes', 'line', {
+    labels: meses,
+    datasets:[{ label:'Unidades', data: state.ventasMensuales.map(m=> m.unidades), borderColor:'#0b4f9e', backgroundColor:'rgba(11,79,158,.12)', fill:true, tension:.3, pointRadius:5, pointBackgroundColor:'#0b4f9e' }]
+  }, { plugins:{ legend:{display:false} } });
+
+  const tbody = document.querySelector('#tablaMensual tbody');
+  tbody.innerHTML = state.ventasMensuales.map(m => {
+    const prom = m.n > 0 ? m.total/m.n : 0;
+    return '<tr><td><b>' + esc(m.mes) + '</b></td>' +
+      '<td class="num">' + fmtNum.format(m.unidades) + '</td>' +
+      '<td class="num">' + fmtNum.format(m.n) + '</td>' +
+      '<td class="num">' + fmtMoneda.format(m.total) + '</td>' +
+      '<td class="num">' + fmtMoneda.format(prom) + '</td></tr>';
+  }).join('');
+}
+
+function renderAnalisis(){
+  const empty = document.getElementById('analisisEmpty');
+  const cont = document.getElementById('analisisContent');
+  if(!state.excelCargado){ empty.style.display=''; cont.style.display='none'; return; }
+  empty.style.display='none'; cont.style.display='';
+
+  const pareto = calcularPareto();
+  const tbody = document.querySelector('#tablaRanking tbody');
+  tbody.innerHTML = pareto.map((p,i) =>
+    '<tr><td>' + (i+1) + '</td><td>' + esc(p.producto) + '</td>' +
+    '<td class="num">' + fmtMoneda.format(p.total) + '</td>' +
+    '<td class="num">' + fmtDec.format(p.participacion) + '%</td>' +
+    '<td class="num">' + fmtDec.format(p.acumulado) + '%</td></tr>'
+  ).join('');
+
+  const top = pareto.slice(0,10);
+  dibujar('chartParticipacion', 'doughnut', {
+    labels: top.map(p=> p.producto),
+    datasets:[{ data: top.map(p=> p.total), backgroundColor:['#0b4f9e','#1565c0','#1976d2','#2196f3','#42a5f5','#64b5f6','#90caf9','#bbdefb','#c5d9f1','#dbeafe'], borderWidth:2, borderColor:'#fff' }]
+  }, { plugins:{ legend:{ position:'right', labels:{ boxWidth:12, font:{size:11} } } }, cutout:'55%' });
+}
+
+function renderDemanda(){
+  const empty = document.getElementById('demandaEmpty');
+  const cont = document.getElementById('demandaContent');
+  if(!state.excelCargado){ empty.style.display=''; cont.style.display='none'; return; }
+  empty.style.display='none'; cont.style.display='';
+
+  const sel = document.getElementById('demProducto');
+  const prodCemento = state.productos.find(p => norm(p.producto).includes('cemento gris'));
+  const prodTop = state.productos[0];
+  const objetivo = prodCemento || prodTop;
+  const prev = sel.value;
+
+  sel.innerHTML = state.productos.map(p => '<option value="' + esc(p.producto) + '">' + esc(p.producto) + '</option>').join('');
+  if(prev && state.productos.some(p => p.producto === prev)) sel.value = prev;
+  else if(objetivo) sel.value = objetivo.producto;
+
+  actualizarDemanda();
+}
+document.getElementById('demProducto').addEventListener('change', actualizarDemanda);
+
+function actualizarDemanda(){
+  const producto = document.getElementById('demProducto').value;
+  if(!producto) return;
+  const m = calcularModeloBayesiano(producto);
+
+  const kpis = [
+    { icon:'bi-calendar3', t:'Meses analizados (n)', v: fmtNum.format(m.n) },
+    { icon:'bi-basket', t:'Demanda histórica total (ΣD)', v: fmtNum.format(m.suma) },
+    { icon:'bi-activity', t:'Demanda esperada E(λ|D)', v: fmtDec.format(m.esperado) + ' uds/periodo' },
+    { icon:'bi-sigma', t:'αₙ = α₀ + ΣD', v: fmtNum.format(m.an) },
+    { icon:'bi-sigma', t:'βₙ = β₀ + n', v: fmtNum.format(m.bn) }
+  ];
+  document.getElementById('kpiBayes').innerHTML = kpis.map(k =>
+    '<div class="kpi"><div class="kpi-head"><i class="bi ' + k.icon + '"></i> ' + esc(k.t) + '</div>' +
+    '<div class="kpi-value sm">' + esc(k.v) + '</div></div>'
+  ).join('');
+
+  document.getElementById('bayesModelo').innerHTML =
+    '<div style="font-size:13px;line-height:1.9;color:#334155;">' +
+      '<p><b>Modelo:</b> D<sub>t</sub> ~ Poisson(λ), λ ~ Gamma(α₀, β₀)</p>' +
+      '<p><b>Prior:</b> α₀ = ' + m.a0 + ', β₀ = ' + m.b0 + '</p>' +
+      '<p><b>Datos:</b> n = ' + m.n + ', ΣD = ' + fmtNum.format(m.suma) + '</p>' +
+      '<p><b>Posterior:</b> αₙ = ' + fmtNum.format(m.an) + ', βₙ = ' + fmtNum.format(m.bn) + '</p>' +
+      '<p><b>Estimación:</b> E(λ|D) = αₙ / βₙ = <b style="color:var(--azul);">' + fmtDec.format(m.esperado) + '</b> unidades por periodo.</p>' +
+    '</div>';
+
+  dibujar('chartDemanda', 'bar', {
+    labels: m.demanda.map(d => d.mes),
+    datasets:[{ label:'Demanda mensual', data: m.demanda.map(d => d.demanda), backgroundColor:'#1565c0', borderRadius:6, maxBarThickness:48 }]
+  }, { plugins:{ legend:{display:false} } });
+}
+
+function renderParametros(){
+  document.getElementById('parStockMin').value = state.parametros.stockMin;
+  document.getElementById('parPuntoRep').value = state.parametros.puntoReposicion;
+  document.getElementById('parStockMax').value = state.parametros.stockMax;
+}
+document.getElementById('formParametros').onsubmit = e => {
+  e.preventDefault();
+  const a = Number(document.getElementById('parStockMin').value);
+  const b = Number(document.getElementById('parPuntoRep').value);
+  const c = Number(document.getElementById('parStockMax').value);
+  if([a,b,c].some(x => !isFinite(x) || x < 0)){ toast('⚠ Revise la información ingresada.', 'err'); return; }
+  state.parametros = { stockMin:a, puntoReposicion:b, stockMax:c };
+  guardarLocalStorage();
+  renderExistencias();
+  toast('Parámetros guardados.', 'ok');
+};
+
+document.getElementById('btnLimpiar').onclick = () => {
+  if(!confirm('¿Está seguro de eliminar todos los datos registrados (entradas, salidas, existencias iniciales y parámetros)? Esta acción no afecta el Excel.')) return;
+  localStorage.removeItem('gd_entradas');
+  localStorage.removeItem('gd_salidas');
+  localStorage.removeItem('gd_existencias_ini');
+  localStorage.removeItem('gd_parametros');
+  state.entradas = [];
+  state.salidas = [];
+  state.existenciasIniciales = {};
+  state.parametros = { stockMin:5, puntoReposicion:10, stockMax:100 };
+  renderTodo();
+  toast('Datos registrados eliminados.', 'ok');
+};
+
+/* =========================================================
+   EXPORTACIÓN
+   ========================================================= */
+document.getElementById('btnExportar').onclick = () => {
+  try{
+    const wb = XLSX.utils.book_new();
+
+    const sProductos = state.productos.length ? state.productos.map(p => ({
+      Producto: p.producto,
+      'Unidades vendidas': p.unidades,
+      'N.º de ventas': p.n,
+      'Ventas totales': p.total,
+      'Participación %': +p.participacion.toFixed(2)
+    })) : [{ Producto:'Sin datos' }];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sProductos), 'Productos');
+
+    const sVentas = state.ventas.length ? state.ventas.map(v => ({
+      ID:v.id, Fecha:v.fecha, Mes:v.mes, Cantidad:v.cantidad, Producto:v.producto, 'Valor venta':v.valor
+    })) : [{ Info:'Sin datos' }];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sVentas), 'Ventas_Historicas');
+
+    const sMensual = state.ventasMensuales.length ? state.ventasMensuales.map(m => ({
+      Mes:m.mes, Unidades:m.unidades, 'N.º ventas':m.n, 'Ventas totales':m.total,
+      'Promedio por venta': m.n>0 ? m.total/m.n : 0
+    })) : [{ Info:'Sin datos' }];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sMensual), 'Ventas_Mensuales');
+
+    const sEntradas = state.entradas.length ? state.entradas.map(e => ({
+      Fecha:e.fecha, Producto:e.producto, Cantidad:e.cantidad, Observación:e.obs||''
+    })) : [{ Info:'Sin entradas' }];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sEntradas), 'Entradas');
+
+    const sSalidas = state.salidas.length ? state.salidas.map(s => ({
+      Fecha:s.fecha, Producto:s.producto, Cantidad:s.cantidad, Valor:s.valor, Observación:s.obs||''
+    })) : [{ Info:'Sin salidas' }];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sSalidas), 'Salidas');
+
+    const movs = calcularMovimientos();
+    const sMovs = movs.length ? movs.map(m => ({
+      Fecha:m.fecha, Tipo:m.tipo, Producto:m.producto, Cantidad:m.cantidad,
+      Valor:m.valor, Observación:m.obs
+    })) : [{ Info:'Sin movimientos' }];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sMovs), 'Movimientos');
+
+    const exis = calcularExistencias();
+    const sExis = exis.length ? exis.map(e => ({
+      Producto:e.producto,
+      'Existencia inicial': e.ini === null ? 'No configurada' : e.ini,
+      Entradas:e.ent, Salidas:e.sal,
+      'Existencia final': e.fin === null ? '—' : e.fin,
+      Estado:e.estado
+    })) : [{ Info:'Sin datos' }];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sExis), 'Existencias');
+
+    const prodMayorUds = [...state.productos].sort((a,b)=> b.unidades - a.unidades)[0];
+    const prodMayorFact = [...state.productos].sort((a,b)=> b.total - a.total)[0];
+    const mesMayor = [...state.ventasMensuales].sort((a,b)=> b.total - a.total)[0];
+    const sInd = [{
+      'Productos registrados': state.productos.length,
+      'Unidades vendidas históricas': state.ventas.reduce((s,v)=> s+v.cantidad, 0),
+      'Registros de ventas': state.ventas.length,
+      'Ventas acumuladas': state.ventas.reduce((s,v)=> s+v.valor, 0),
+      'Total entradas operativas': state.entradas.reduce((s,e)=> s+e.cantidad, 0),
+      'Total salidas operativas': state.salidas.reduce((s,x)=> s+x.cantidad, 0),
+      'N.º movimientos': state.entradas.length + state.salidas.length,
+      'Producto más vendido (uds)': prodMayorUds ? prodMayorUds.producto : '—',
+      'Producto mayor facturación': prodMayorFact ? prodMayorFact.producto : '—',
+      'Mes mayor facturación': mesMayor ? mesMayor.mes : '—'
+    }];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sInd), 'Indicadores');
+
+    XLSX.writeFile(wb, 'REPORTE_GEMELO_DIGITAL_INVENTARIOS.xlsx');
+    toast('Reporte exportado correctamente.', 'ok');
+  }catch(err){
+    console.error(err);
+    toast('Error al exportar: ' + err.message, 'err');
+  }
+};
+
+/* =========================================================
+   GRÁFICOS
+   ========================================================= */
+function dibujar(id, tipo, data, options){
+  const canvas = document.getElementById(id);
+  if(!canvas) return;
+  if(charts[id]) { charts[id].destroy(); }
+  charts[id] = new Chart(canvas.getContext('2d'), {
+    type: tipo,
+    data: data,
+    options: Object.assign({
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{ boxWidth:12, font:{size:11} } } }
+    }, options||{})
+  });
+}
+
+/* =========================================================
+   NAVEGACIÓN
+   ========================================================= */
+document.querySelectorAll('.nav-item').forEach(a => {
+  a.onclick = e => {
+    e.preventDefault();
+    document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+    a.classList.add('active');
+    const view = a.dataset.view;
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    const target = document.getElementById('view-' + view);
+    if(target) target.classList.add('active');
+    document.getElementById('sidebar').classList.remove('open');
+    if(view === 'dashboard') renderDashboard();
+    if(view === 'ventas') renderVentas();
+    if(view === 'analisis') renderAnalisis();
+    if(view === 'demanda') actualizarDemanda();
+  };
+});
+
+document.getElementById('menuToggle').onclick = () => {
+  document.getElementById('sidebar').classList.toggle('open');
+};
+
+/* =========================================================
+   INICIALIZACIÓN
+   ========================================================= */
+(function init(){
+  cargarLocalStorage();
+  document.getElementById('entFecha').value = hoyISO();
+  document.getElementById('salFecha').value = hoyISO();
+  renderSelectsProductos();
+  renderTodo();
+})();
+</script>
+</body>
+</html>
